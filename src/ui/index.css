@@ -1,0 +1,86 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-width: 100%;
+  min-height: 100vh;
+  /* Figma standard background for plugins */
+  background-color: var(--figma-color-bg);
+  color: var(--figma-color-text);
+}
+
+#root {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Figma Theme Colors Mapping */
+.bg-primary { background-color: var(--figma-color-bg); }
+.text-primary { color: var(--figma-color-text); }
+.text-brand { color: var(--figma-color-text-brand); }
+.bg-brand { background-color: var(--figma-color-bg-brand); color: var(--figma-color-text-onbrand); border: none; }
+.bg-brand:hover { background-color: var(--figma-color-bg-brand-hover); }
+
+.container {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.chat-log {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
+.input-area {
+  display: flex;
+  gap: 8px;
+}
+
+.input {
+  flex: 1;
+  background-color: var(--figma-color-bg);
+  color: var(--figma-color-text);
+  border: 1px solid var(--figma-color-border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+.input:focus {
+  border-color: var(--figma-color-border-brand-strong);
+}
+
+.button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  font-family: inherit;
+}
+
+.icon-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  color: var(--figma-color-icon);
+}
+.icon-button:hover {
+  background-color: var(--figma-color-bg-hover);
+}

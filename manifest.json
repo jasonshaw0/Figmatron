@@ -1,0 +1,17 @@
+{
+  "name": "Figma Gemini AI",
+  "id": "1",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "editorType": ["figma", "dev"],
+  "networkAccess": {
+    "allowedDomains": ["*"],
+    "devAllowedDomains": ["ws://localhost:9876", "http://localhost:9876"],
+    "reasoning": "Calling Gemini API and potentially local MCP servers"
+  },
+  "capabilities": ["inspect", "codegen"],
+  "codegenLanguages": [
+    { "label": "React", "value": "react" }
+  ]
+}
