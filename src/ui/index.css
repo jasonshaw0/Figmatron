@@ -33,12 +33,13 @@ body {
   padding: 16px;
   height: 100vh;
   box-sizing: border-box;
+  gap: 8px;
 }
 
 .chat-log {
   flex: 1;
   overflow-y: auto;
-  margin-bottom: 16px;
+  margin-bottom: 4px;
 }
 
 .input-area {
@@ -68,6 +69,125 @@ body {
   font-weight: 500;
   font-size: 0.875rem;
   font-family: inherit;
+}
+
+.mode-toggle {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.mode-button {
+  background-color: var(--figma-color-bg-secondary);
+  color: var(--figma-color-text);
+  border: 1px solid var(--figma-color-border);
+  text-transform: capitalize;
+}
+
+.mode-button.mode-active {
+  background-color: var(--figma-color-bg-brand-tertiary, #dce9ff);
+  border-color: var(--figma-color-border-brand-strong);
+  color: var(--figma-color-text-brand);
+}
+
+.status-block {
+  border: 1px solid var(--figma-color-border);
+  border-radius: 6px;
+  padding: 8px;
+  background: var(--figma-color-bg-secondary);
+}
+
+.stage-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.stage-chip {
+  font-size: 0.7rem;
+  color: var(--figma-color-text-secondary);
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--figma-color-border);
+  text-transform: capitalize;
+}
+
+.stage-chip.stage-complete {
+  color: var(--figma-color-text);
+  background: var(--figma-color-bg-tertiary);
+}
+
+.stage-chip.stage-active {
+  background: var(--figma-color-bg-brand-tertiary, #dce9ff);
+  color: var(--figma-color-text-brand);
+  border-color: var(--figma-color-border-brand-strong);
+}
+
+.status-meta {
+  font-size: 0.75rem;
+  margin-top: 6px;
+  color: var(--figma-color-text-secondary);
+}
+
+.chat-bubble {
+  align-self: flex-start;
+  background-color: var(--figma-color-bg-secondary);
+  color: var(--figma-color-text);
+  padding: 8px 12px;
+  border-radius: 8px;
+  max-width: 94%;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+}
+
+.chat-user {
+  align-self: flex-end;
+  background-color: var(--figma-color-bg-brand-tertiary, #e5f4ff);
+  color: var(--figma-color-text-brand);
+}
+
+.chat-error {
+  border: 1px solid var(--figma-color-border-danger);
+  background-color: var(--figma-color-bg-danger-secondary, #ffe8e8);
+  color: var(--figma-color-text-danger);
+}
+
+.chat-success {
+  border: 1px solid var(--figma-color-border-success);
+}
+
+.retry-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--figma-color-border-danger);
+  background: var(--figma-color-bg-danger-secondary, #fff2f2);
+  font-size: 0.75rem;
+}
+
+.debug-panel {
+  margin-top: 8px;
+  border: 1px solid var(--figma-color-border);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 0.75rem;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.debug-section {
+  margin-top: 8px;
+}
+
+.debug-section pre {
+  white-space: pre-wrap;
+  background: var(--figma-color-bg-secondary);
+  border: 1px solid var(--figma-color-border);
+  border-radius: 4px;
+  padding: 6px;
 }
 
 .icon-button {

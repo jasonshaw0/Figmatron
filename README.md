@@ -1,10 +1,20 @@
 # Figmatron  
 #### Industrial-Grade Approximation Engine for Designers Who Know Better
 
-- Just another AI garbage generator. Gemini API for generating and modifying Figma graphics with natural language. 
+Early-stage Figma plugin that uses the Gemini API to generate and modify SVG graphics from natural language.
 
-- Bring Your Own Key. I'm not selling you a subscription.
-- Free and open source, mutilate my code as you please.
-- Surprisingly competent SVG output, but not always.
-- Just enough unpredictability to keep things interesting. 
+- Bring your own API key.  
+- No subscriptions.  
+- Open source 
+
+*It is,* yet another AI garbage generator.
+
+*It is* also occasionally very good.
+
+Expect rapid iteration, occasional brilliance, and the need to manually fix things. 
+
+Very much under construction.
+
+### License
+No rights reserved. Do whatever you want. If you make money, good for you. If you break it, that's on you. I literally don't care. 
 

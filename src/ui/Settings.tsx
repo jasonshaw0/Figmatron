@@ -1,14 +1,36 @@
 import { useState } from 'react';
 import { Settings as SettingsIcon, X } from 'lucide-react';
+import type { RouteOverride } from '../shared/protocol';
 
 interface Props {
   apiKey: string;
   setApiKey: (k: string) => void;
   model: string;
   setModel: (m: string) => void;
+  debugMode: boolean;
+  setDebugMode: (value: boolean) => void;
+  autoScreenshotModify: boolean;
+  setAutoScreenshotModify: (value: boolean) => void;
+  screenshotForCreateAsk: boolean;
+  setScreenshotForCreateAsk: (value: boolean) => void;
+  routeOverride: RouteOverride;
+  setRouteOverride: (value: RouteOverride) => void;
 }
 
-export default function Settings({ apiKey, setApiKey, model, setModel }: Props) {
+export default function Settings({
+  apiKey,
+  setApiKey,
+  model,
+  setModel,
+  debugMode,
+  setDebugMode,
+  autoScreenshotModify,
+  setAutoScreenshotModify,
+  screenshotForCreateAsk,
+  setScreenshotForCreateAsk,
+  routeOverride,
+  setRouteOverride
+}: Props) {
   const [isOpen, setIsOpen] = useState(false);
 
   if (!isOpen) {
@@ -49,8 +71,8 @@ export default function Settings({ apiKey, setApiKey, model, setModel }: Props) 
           Model
         </label>
         <select 
-          value={model} 
-          onChange={e => setModel(e.target.value)} 
+          value={model}
+          onChange={e => setModel(e.target.value)}
           className="input"
           style={{ width: '100%', boxSizing: 'border-box', marginBottom: '16px' }}
         >
@@ -58,9 +80,54 @@ export default function Settings({ apiKey, setApiKey, model, setModel }: Props) 
           <option value="gemini-3-pro-preview">gemini-3-pro-preview</option>
           <option value="gemini-2.5-flash">gemini-2.5-flash</option>
         </select>
-        
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', fontSize: '0.875rem' }}>
+          <input
+            type="checkbox"
+            checked={autoScreenshotModify}
+            onChange={e => setAutoScreenshotModify(e.target.checked)}
+          />
+          Auto-include screenshot in Modify mode
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', fontSize: '0.875rem' }}>
+          <input
+            type="checkbox"
+            checked={screenshotForCreateAsk}
+            onChange={e => setScreenshotForCreateAsk(e.target.checked)}
+          />
+          Include screenshot in Create/Ask mode
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', fontSize: '0.875rem' }}>
+          <input
+            type="checkbox"
+            checked={debugMode}
+            onChange={e => setDebugMode(e.target.checked)}
+          />
+          Enable debug panel
+        </label>
+
+        {debugMode && (
+          <>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500 }}>
+              Route Override
+            </label>
+            <select
+              value={routeOverride}
+              onChange={e => setRouteOverride(e.target.value as RouteOverride)}
+              className="input"
+              style={{ width: '100%', boxSizing: 'border-box', marginBottom: '16px' }}
+            >
+              <option value="auto">auto</option>
+              <option value="direct_svg">direct_svg</option>
+              <option value="structured_ir">structured_ir</option>
+            </select>
+          </>
+        )}
+
         <p style={{ fontSize: '0.75rem', opacity: 0.7, marginBottom: '16px' }}>
-          API Keys are currently stored locally in the plugin state during design dev mode.
+          Settings and keys are stored locally in browser localStorage for this plugin UI.
         </p>
       </div>
     </div>
