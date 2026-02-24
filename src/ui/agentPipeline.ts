@@ -28,14 +28,13 @@ Do not output SVG unless explicitly asked.
 `;
 
 const VECTORIZE_PROMPT = `
-You are Figmatron, a specialized AI vectorization and optimization engine.
-Your task is to analyze the provided screenshot image and recreate it faithfully as an SVG.
-You must apply any of the user's specific controls and customization requests (e.g. smoothness, color mode, detail level).
-Return valid production-safe SVG only. Follow these strict rules:
-- Output a single complete SVG.
-- Include viewBox on root <svg>.
-- Never include scripts, foreignObject, or external references.
-- Clean up any compression artifacts and heavily optimize paths for a clean vector look.
+You are Figmatron, a screenshot-to-SVG reconstruction engine.
+
+Goal: recreate the screenshot as faithfully as possible. Preserve layout, proportions, stroke widths and corner radii. Do not stylise, simplify or logo-ify the design.
+
+Use <path>, <rect>, <circle>, <ellipse>, <line>, <polyline>, <polygon> where appropriate. Avoid excessive node count, but never at the expense of fidelity.
+
+Return exactly one complete SVG with a viewBox on the root element. Do not include scripts, foreignObject or external references. Do not embed raster images unless explicitly requested.
 `;
 
 const STRUCTURED_IR_PROMPT = `
@@ -100,6 +99,8 @@ export const isStructuredTaskPrompt = (prompt: string, mode: QueryMode) => {
   const keywords = [
     'flowchart',
     'block diagram',
+    'workflow',
+    'process map',
     'reflow',
     'orientation',
     'rotate'
@@ -185,7 +186,7 @@ export const buildPromptText = (params: {
     segments.push(`PRIMARY_NODE_METADATA:\n${JSON.stringify(context.metadata, null, 2)}`);
   }
 
-  if (context.svg) {
+  if (context.svg && mode !== 'vectorize') {
     segments.push(
       `SELECTED_CONTEXT_SVG:\n\`\`\`xml\n${truncate(context.svg, MAX_PROMPT_SVG_CHARS)}\n\`\`\``
     );
@@ -220,6 +221,7 @@ interface GeminiCallParams {
   systemPrompt: string;
   userText: string;
   screenshotPngBase64?: string;
+  maxScreenshotBytes?: number;
   signal?: AbortSignal;
 }
 
@@ -236,13 +238,16 @@ export const callGemini = async (params: GeminiCallParams): Promise<string> => {
   const parts: Array<Record<string, unknown>> = [{ text: userText }];
   if (screenshotPngBase64) {
     const bytes = Math.floor(screenshotPngBase64.length * 0.75);
-    if (bytes <= MAX_PROMPT_SCREENSHOT_BYTES) {
+    const limit = params.maxScreenshotBytes || 3000000;
+    if (bytes <= limit) {
       parts.push({
         inline_data: {
           mime_type: 'image/png',
           data: screenshotPngBase64
         }
       });
+    } else {
+      console.warn(`Screenshot omitted from Gemini call. Size ${bytes} exceeds limit ${limit}.`);
     }
   }
 
@@ -268,8 +273,16 @@ export const callGemini = async (params: GeminiCallParams): Promise<string> => {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `Model request failed: ${response.status}`);
+    let errorDesc = `HTTP ${response.status} ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      if (errorData?.error?.message) {
+        errorDesc += `: ${errorData.error.message}`;
+      }
+    } catch {
+      // ignore JSON parse error for fallback
+    }
+    throw new Error(errorDesc);
   }
 
   const json = await response.json();
@@ -281,7 +294,7 @@ export const callGemini = async (params: GeminiCallParams): Promise<string> => {
 
   if (!answer) {
     const finishReason = candidate?.finishReason || 'unknown';
-    throw new Error(`Model returned no text content (finishReason=${finishReason}).`);
+    throw new Error(`Model returned no content (finishReason=${finishReason}). ${finishReason === 'SAFETY' ? 'Triggered safety filter.' : ''}`);
   }
   return answer;
 };
@@ -470,6 +483,44 @@ export const validateDiagramIR = (diagram: DiagramIR): ValidationReport => {
 
   if ((diagram.nodes || []).length > 100) {
     warnings.push('Large diagram node count may reduce readability.');
+  }
+
+  // Check for node overlaps
+  const nodesArr = diagram.nodes || [];
+  for (let i = 0; i < nodesArr.length; i++) {
+    for (let j = i + 1; j < nodesArr.length; j++) {
+      const a = nodesArr[i];
+      const b = nodesArr[j];
+      const overlapX = a.x < b.x + b.width && a.x + a.width > b.x;
+      const overlapY = a.y < b.y + b.height && a.y + a.height > b.y;
+      if (overlapX && overlapY) {
+        errors.push(`Nodes "${a.id}" and "${b.id}" overlap, which breaks readability.`);
+      }
+    }
+  }
+
+  // Check connectivity
+  if (nodesArr.length > 1) {
+    const adj = new Map<string, string[]>();
+    for (const node of nodesArr) adj.set(node.id, []);
+    for (const edge of diagram.edges || []) {
+      adj.get(edge.from)?.push(edge.to);
+      adj.get(edge.to)?.push(edge.from);
+    }
+    const visited = new Set<string>();
+    const stack = [nodesArr[0].id];
+    while (stack.length > 0) {
+      const cur = stack.pop()!;
+      if (!visited.has(cur)) {
+        visited.add(cur);
+        for (const neighbor of adj.get(cur) || []) {
+          stack.push(neighbor);
+        }
+      }
+    }
+    if (visited.size < nodesArr.length) {
+      warnings.push(`Diagram has unconnected components (found ${visited.size} connected nodes out of ${nodesArr.length}).`);
+    }
   }
 
   return {

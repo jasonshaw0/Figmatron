@@ -15,6 +15,8 @@ interface Props {
   setScreenshotForCreateAsk: (value: boolean) => void;
   routeOverride: RouteOverride;
   setRouteOverride: (value: RouteOverride) => void;
+  maxScreenshotSizeMB: number;
+  setMaxScreenshotSizeMB: (value: number) => void;
 }
 
 export default function Settings({
@@ -29,7 +31,9 @@ export default function Settings({
   screenshotForCreateAsk,
   setScreenshotForCreateAsk,
   routeOverride,
-  setRouteOverride
+  setRouteOverride,
+  maxScreenshotSizeMB,
+  setMaxScreenshotSizeMB
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -107,6 +111,20 @@ export default function Settings({
           />
           Enable debug panel
         </label>
+
+        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500 }}>
+          Max Screenshot Size (MB)
+        </label>
+        <input
+          type="number"
+          step={0.5}
+          min={1}
+          max={10}
+          value={maxScreenshotSizeMB}
+          onChange={e => setMaxScreenshotSizeMB(Number(e.target.value))}
+          className="input"
+          style={{ width: '100%', boxSizing: 'border-box', marginBottom: '16px' }}
+        />
 
         {debugMode && (
           <>

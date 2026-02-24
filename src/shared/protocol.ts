@@ -44,6 +44,7 @@ export interface ContextPacket {
   metadata?: SelectionMetadata;
   screenshotPngBase64?: string;
   selectionInfo: SelectionInfo;
+  screenshotError?: string;
 }
 
 export interface ValidationReport {
@@ -128,6 +129,7 @@ export type PluginRequestMessage =
       requestId: string;
       mode: QueryMode;
       includeScreenshot: boolean;
+    maxScreenshotBytes: number;
     }
   | {
       type: 'insert-svg';

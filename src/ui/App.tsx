@@ -133,6 +133,10 @@ export default function App() {
   const [routeOverride, setRouteOverride] = useState(() =>
     safeGetRouteOverride('figmatron-route-override', 'auto')
   );
+  const [maxScreenshotSizeMB, setMaxScreenshotSizeMB] = useState(() => {
+    const val = safeGetItem('figmatron-max-screenshot-mb', '3');
+    return isNaN(Number(val)) ? 3 : Number(val);
+  });
 
   const [mode, setMode] = useState<QueryMode>('create');
   const [vectorizeDetail, setVectorizeDetail] = useState('medium');
@@ -193,6 +197,10 @@ export default function App() {
   useEffect(() => {
     safeSetItem('figmatron-route-override', routeOverride);
   }, [routeOverride]);
+
+  useEffect(() => {
+    safeSetItem('figmatron-max-screenshot-mb', String(maxScreenshotSizeMB));
+  }, [maxScreenshotSizeMB]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -274,7 +282,8 @@ export default function App() {
   const requestContext = (
     requestId: string,
     queryMode: QueryMode,
-    includeScreenshot: boolean
+    includeScreenshot: boolean,
+    maxScreenshotBytes: number
   ) =>
     new Promise<{ context: ContextPacket; error?: string }>((resolve, reject) => {
       const timeoutId = window.setTimeout(() => {
@@ -292,7 +301,8 @@ export default function App() {
         type: 'prepare-context',
         requestId,
         mode: queryMode,
-        includeScreenshot
+        includeScreenshot,
+        maxScreenshotBytes
       });
     });
 
@@ -428,7 +438,8 @@ export default function App() {
         queryMode === 'vectorize' ? true : queryMode === 'modify' ? autoScreenshotModify : screenshotForCreateAsk;
 
       enterStage('prepare_context');
-      const contextResult = await requestContext(requestId, queryMode, includeScreenshot);
+      const maxScreenshotBytes = maxScreenshotSizeMB * 1024 * 1024;
+      const contextResult = await requestContext(requestId, queryMode, includeScreenshot, maxScreenshotBytes);
       const context = contextResult.context;
       setLastContext(context);
       trace.contextSummary.selectionCount = context.selectionInfo.count;
@@ -439,6 +450,13 @@ export default function App() {
         ? Math.floor(context.screenshotPngBase64.length * 0.75)
         : 0;
       closeStage();
+
+      if (context.screenshotError) {
+        if (queryMode === 'vectorize') {
+          throw new PipelineError('model', context.screenshotError);
+        }
+        appendStatus(`Warning: ${context.screenshotError}`);
+      }
 
       enterStage('route');
       const systemPrompt = systemPromptFor(queryMode, route);
@@ -459,6 +477,7 @@ export default function App() {
         systemPrompt,
         userText: userPrompt,
         screenshotPngBase64: includeScreenshot ? context.screenshotPngBase64 : undefined,
+        maxScreenshotBytes,
         signal: controller.signal
       });
       trace.payloadSizes.responseChars = initialResponse.length;
@@ -736,6 +755,8 @@ export default function App() {
         setScreenshotForCreateAsk={setScreenshotForCreateAsk}
         routeOverride={routeOverride}
         setRouteOverride={setRouteOverride}
+        maxScreenshotSizeMB={maxScreenshotSizeMB}
+        setMaxScreenshotSizeMB={setMaxScreenshotSizeMB}
       />
 
       <h1 className="text-brand" style={{ marginTop: 0, fontSize: '1.25rem' }}>
@@ -754,6 +775,31 @@ export default function App() {
           </button>
         ))}
       </div>
+
+      {mode === 'vectorize' && (
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          <select
+            className="input"
+            value={vectorizeDetail}
+            onChange={e => setVectorizeDetail(e.target.value)}
+            style={{ flex: 1 }}
+          >
+            <option value="low">Low Detail</option>
+            <option value="medium">Medium Detail</option>
+            <option value="high">High Detail</option>
+          </select>
+          <select
+            className="input"
+            value={vectorizeColor}
+            onChange={e => setVectorizeColor(e.target.value)}
+            style={{ flex: 1 }}
+          >
+            <option value="full_color">Full Color</option>
+            <option value="grayscale">Grayscale</option>
+            <option value="monochrome">Monochrome</option>
+          </select>
+        </div>
+      )}
 
       <ContextIndicator
         selection={selection}
@@ -860,54 +906,34 @@ export default function App() {
         )}
       </div>
 
-      {mode === 'vectorize' && (
-        <div style={{ display: 'flex', gap: '8px', fontSize: '0.75rem', marginTop: '4px' }}>
-          <label style={{ flex: 1 }}>
-            Detail:
-            <select
-              value={vectorizeDetail}
-              onChange={(e) => setVectorizeDetail(e.target.value)}
-              disabled={isLoading}
-              style={{ width: '100%', padding: '4px', background: 'var(--figma-color-bg-secondary)', color: 'var(--figma-color-text)', border: '1px solid var(--figma-color-border)', borderRadius: '4px' }}
-            >
-              <option value="low">Low (Simplified)</option>
-              <option value="medium">Medium</option>
-              <option value="high">High (Detailed paths)</option>
-            </select>
-          </label>
-          <label style={{ flex: 1 }}>
-            Color Mode:
-            <select
-              value={vectorizeColor}
-              onChange={(e) => setVectorizeColor(e.target.value)}
-              disabled={isLoading}
-              style={{ width: '100%', padding: '4px', background: 'var(--figma-color-bg-secondary)', color: 'var(--figma-color-text)', border: '1px solid var(--figma-color-border)', borderRadius: '4px' }}
-            >
-              <option value="monochrome">Monochrome</option>
-              <option value="grayscale">Grayscale</option>
-              <option value="full_color">Full Color</option>
-            </select>
-          </label>
-        </div>
-      )}
-
       {debugMode && (
         <details className="debug-panel">
           <summary>Debug Panel</summary>
           <div className="debug-section">
             <strong>Latest Trace</strong>
-            <pre>{JSON.stringify(diagnostics[0] || null, null, 2)}</pre>
+            {diagnostics[0] ? (
+              <>
+                <table style={{ width: '100%', fontSize: '0.75rem', marginTop: '4px', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    <tr><td><b>Mode</b></td><td style={{ textAlign: 'right' }}>{diagnostics[0].mode}</td></tr>
+                    <tr><td><b>Route</b></td><td style={{ textAlign: 'right' }}>{diagnostics[0].route}</td></tr>
+                    <tr><td><b>Time</b></td><td style={{ textAlign: 'right' }}>{diagnostics[0].totalMs} ms</td></tr>
+                    <tr><td><b>Prompt Size</b></td><td style={{ textAlign: 'right' }}>{diagnostics[0].payloadSizes.promptChars} chars</td></tr>
+                    <tr><td><b>SVG Size</b></td><td style={{ textAlign: 'right' }}>{diagnostics[0].payloadSizes.contextSvgChars} chars</td></tr>
+                    <tr><td><b>PNG Size</b></td><td style={{ textAlign: 'right' }}>{diagnostics[0].payloadSizes.screenshotBytes} bytes</td></tr>
+                    <tr><td><b>Outcome</b></td><td style={{ textAlign: 'right' }}>{diagnostics[0].outcome}</td></tr>
+                  </tbody>
+                </table>
+                <button className="button" onClick={copyLatestDiagnostics} style={{ marginTop: '8px', width: '100%' }}>Copy Full JSON</button>
+              </>
+            ) : (
+              <pre>No trace yet.</pre>
+            )}
           </div>
           <div className="debug-section">
             <strong>Context Preview</strong>
             <pre>{JSON.stringify(lastContext?.metadata || null, null, 2)}</pre>
             <pre>{(lastContext?.svg || '').slice(0, 1800) || '(no svg context)'}</pre>
-            <p>
-              screenshot bytes:{' '}
-              {lastContext?.screenshotPngBase64
-                ? Math.floor(lastContext.screenshotPngBase64.length * 0.75)
-                : 0}
-            </p>
           </div>
           <div className="debug-section">
             <strong>Status Log</strong>

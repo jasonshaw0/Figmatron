@@ -93,20 +93,28 @@ const exportSvg = async (node: SceneNode): Promise<string | undefined> => {
   }
 };
 
-const exportPngBase64 = async (node: SceneNode): Promise<string | undefined> => {
-  try {
-    const bytes = await node.exportAsync({
-      format: 'PNG',
-      constraint: {
-        type: 'SCALE',
-        value: 1
+const exportPngBase64 = async (
+  node: SceneNode,
+  maxBytes: number
+): Promise<{ base64?: string; error?: string }> => {
+  const scales = [1, 0.75, 0.5, 0.25];
+  for (const scale of scales) {
+    try {
+      const bytes = await node.exportAsync({
+        format: 'PNG',
+        constraint: { type: 'SCALE', value: scale }
+      });
+      const base64 = figma.base64Encode(bytes);
+      const estimatedBytes = Math.floor(base64.length * 0.75);
+      if (estimatedBytes <= maxBytes) {
+        return { base64 };
       }
-    });
-    return figma.base64Encode(bytes);
-  } catch (error) {
-    console.warn('Failed to export PNG screenshot context', error);
-    return undefined;
+      console.log(`Screenshot at scale ${scale} was ${estimatedBytes} bytes, exceeding limit of ${maxBytes}`);
+    } catch (error) {
+      console.warn(`Failed to export PNG at scale ${scale}`, error);
+    }
   }
+  return { error: `Selection is too large (${maxBytes} bytes max). Try selecting a smaller area or reducing resolution.` };
 };
 
 const publishSelectionState = () => {
@@ -126,9 +134,13 @@ const handlePrepareContext = async (
 
   if (primary) {
     context.metadata = toSelectionMetadata(primary);
-    context.svg = await exportSvg(primary);
+    if (message.mode !== 'vectorize') {
+      context.svg = await exportSvg(primary);
+    }
     if (message.includeScreenshot) {
-      context.screenshotPngBase64 = await exportPngBase64(primary);
+      const result = await exportPngBase64(primary, message.maxScreenshotBytes);
+      context.screenshotPngBase64 = result.base64;
+      context.screenshotError = result.error;
     }
   }
 
